@@ -5,140 +5,254 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>REACTION_SYS</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Share Tech Mono',monospace;overflow:hidden;user-select:none}
-  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,204,0,0.03) 2px,rgba(255,204,0,0.03) 4px);pointer-events:none;z-index:10}
-  h1{font-family:'Orbitron',monospace;color:#ffcc00;font-size:1.4em;letter-spacing:.3em;text-shadow:0 0 20px #ffcc00,0 0 40px #ffcc00;margin-bottom:16px}
-  #arena{width:400px;height:400px;border:1px solid #ffcc00;box-shadow:0 0 30px rgba(255,204,0,.4);position:relative;cursor:crosshair;overflow:hidden;transition:background .1s}
-  #arena.wait{background:#000}
-  #arena.ready{background:rgba(255,0,85,.08)}
-  #arena.go{background:rgba(0,255,65,.08)}
-  #arena.early{background:rgba(255,0,85,.2)}
-  #center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-  #state{font-family:'Orbitron',monospace;font-size:1.6em;font-weight:900;letter-spacing:.2em}
-  #sub{font-size:.8em;letter-spacing:.1em;margin-top:8px;color:#666}
-  #target{position:absolute;width:60px;height:60px;border-radius:50%;cursor:crosshair;display:none;transform:translate(-50%,-50%)}
-  #stats{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;justify-content:center}
-  .stat{border:1px solid #ffcc00;padding:6px 16px;color:#ffcc00;font-size:.8em;text-shadow:0 0 8px #ffcc00;min-width:90px;text-align:center}
-  .stat b{display:block;font-size:1.4em;margin-top:2px}
-  #history{width:400px;margin-top:12px;display:flex;gap:4px;height:40px;align-items:flex-end}
-  .bar{flex:1;background:#ffcc00;min-height:4px;position:relative;transition:height .3s}
-  #ctrl{color:#333;font-size:.75em;margin-top:10px;letter-spacing:.1em}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap');
+:root{--bg:#0d1117;--surface:#161b22;--border:#21262d;--border2:#30363d;--text:#c9d1d9;--dim:#484f58;--mid:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:16px;user-select:none}
+.topbar{background:var(--surface);border:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:12px;width:100%;max-width:760px;margin-bottom:8px}
+.dots{display:flex;gap:5px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:#f85149}.dy{background:#d29922}.dg{background:#3fb950}
+.tb-title{flex:1;text-align:center;font-size:.65em;color:var(--dim);letter-spacing:.15em}
+.main{display:flex;gap:12px;width:100%;max-width:760px}
+.left{display:flex;flex-direction:column;gap:8px;flex:1}
+/* arena */
+.arena{width:100%;aspect-ratio:1;border:1px solid var(--border2);position:relative;cursor:crosshair;overflow:hidden;background:#000;transition:background .08s;max-height:380px}
+.arena-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(88,166,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,.04) 1px,transparent 1px);background-size:30px 30px;pointer-events:none}
+.arena-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.state-text{font-family:'Orbitron',monospace;font-size:clamp(1em,4vw,1.6em);font-weight:900;letter-spacing:.15em}
+.state-sub{font-size:.65em;color:var(--mid);margin-top:6px;letter-spacing:.1em}
+.target{position:absolute;width:56px;height:56px;border-radius:50%;cursor:crosshair;display:none;transform:translate(-50%,-50%);transition:transform .1s}
+.target:hover{transform:translate(-50%,-50%) scale(1.1)}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat-box{background:var(--surface);border:1px solid var(--border);padding:8px 10px;text-align:center}
+.stat-label{font-size:.52em;color:var(--dim);letter-spacing:.15em;margin-bottom:3px}
+.stat-val{font-size:.95em;font-weight:700;color:var(--yellow)}
+/* history */
+.hist-wrap{background:var(--surface);border:1px solid var(--border);padding:10px 12px}
+.hist-label{font-size:.55em;color:var(--dim);letter-spacing:.15em;margin-bottom:6px}
+.hist-bars{display:flex;gap:3px;align-items:flex-end;height:36px}
+.hist-bar{flex:1;min-height:3px;border-radius:1px;transition:height .3s}
+/* right */
+.panel{background:var(--surface);border:1px solid var(--border);width:200px;flex-shrink:0}
+.panel-hdr{border-bottom:1px solid var(--border);padding:8px 12px;font-size:.62em;color:var(--dim);letter-spacing:.18em}
+.rank-row{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border);font-size:.65em}
+.rank-row:last-child{border-bottom:none}
+.rank-num{color:var(--dim);font-size:.85em;text-align:center}
+.rank-num.gold{color:#ffd700;font-weight:700}
+.rank-num.silver{color:#c0c0c0;font-weight:700}
+.rank-num.bronze{color:#cd7f32;font-weight:700}
+.rank-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-score{color:var(--yellow);font-weight:700;font-size:.9em}
+.rank-score::after{content:'ms';font-size:.75em;color:var(--dim);margin-left:1px}
+.rank-empty{color:var(--dim);font-size:.6em;padding:5px 10px;border-bottom:1px solid var(--border)}
+.rank-new{background:rgba(210,153,34,.08);border-left:2px solid var(--yellow) !important}
+/* ranking note: lower = better */
+.panel-note{font-size:.55em;color:var(--dim);padding:6px 10px;border-top:1px solid var(--border);letter-spacing:.08em}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(4px)}
+.overlay.hide{display:none}
+.modal{background:var(--surface);border:1px solid var(--border2);padding:24px;width:280px;text-align:center}
+.modal h2{font-family:'Orbitron',monospace;color:var(--yellow);font-size:1em;letter-spacing:.2em;margin-bottom:6px}
+.modal .score-big{font-size:2em;font-weight:700;color:var(--text);margin:10px 0}
+.modal .score-big span{font-size:.4em;color:var(--dim);vertical-align:middle}
+.modal .sub{font-size:.65em;color:var(--dim);margin-bottom:16px;letter-spacing:.1em}
+.modal input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.85em;padding:8px 10px;margin-bottom:10px;outline:none}
+.modal input:focus{border-color:var(--yellow)}
+.btns{display:flex;gap:8px}
+.btn{flex:1;background:transparent;border:1px solid;font-family:'JetBrains Mono',monospace;font-size:.72em;padding:8px;cursor:pointer;transition:all .15s}
+.btn-ok{border-color:var(--yellow);color:var(--yellow)}
+.btn-ok:hover{background:rgba(210,153,34,.1)}
+.btn-skip{border-color:var(--border2);color:var(--mid)}
+.rank-badge{display:inline-block;padding:2px 8px;border:1px solid var(--yellow);color:var(--yellow);font-size:.62em;letter-spacing:.1em;margin-bottom:8px}
 </style>
 </head>
 <body>
-<h1>▶ REACTION_SYS v2.0</h1>
-<div id="arena" class="wait">
-  <div id="center">
-    <div id="state" style="color:#ffcc00">STANDBY</div>
-    <div id="sub">CLICK TO BEGIN</div>
+<div class="topbar">
+  <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+  <div class="tb-title">REACTION_SYS v3.0 — NEURAL LATENCY TEST</div>
+</div>
+<div class="main">
+  <div class="left">
+    <div class="arena" id="arena">
+      <div class="arena-grid"></div>
+      <div class="arena-center">
+        <div class="state-text" id="stateText" style="color:var(--yellow)">STANDBY</div>
+        <div class="state-sub" id="stateSub">CLICK TO BEGIN</div>
+      </div>
+      <div class="target" id="target"></div>
+    </div>
+    <div class="stats">
+      <div class="stat-box"><div class="stat-label">LAST</div><div class="stat-val" id="sLast">—</div></div>
+      <div class="stat-box"><div class="stat-label">BEST</div><div class="stat-val" id="sBest" style="color:var(--green)">—</div></div>
+      <div class="stat-box"><div class="stat-label">AVG</div><div class="stat-val" id="sAvg" style="color:var(--accent)">—</div></div>
+      <div class="stat-box"><div class="stat-label">TRIES</div><div class="stat-val" id="sTries" style="color:var(--mid)">0</div></div>
+    </div>
+    <div class="hist-wrap">
+      <div class="hist-label">REACTION HISTORY (LAST 10)</div>
+      <div class="hist-bars" id="histBars"></div>
+    </div>
   </div>
-  <div id="target"></div>
+  <div class="panel">
+    <div class="panel-hdr">🏆 TOP 10 BEST</div>
+    <div id="rankList"></div>
+    <div class="panel-note">★ 낮을수록 좋음</div>
+  </div>
 </div>
-<div id="stats">
-  <div class="stat">LAST<b id="last">—</b></div>
-  <div class="stat">BEST<b id="best">—</b></div>
-  <div class="stat">AVG<b id="avg">—</b></div>
-  <div class="stat">TRIES<b id="tries">0</b></div>
+
+<div class="overlay hide" id="overlay">
+  <div class="modal">
+    <h2>NEW RECORD!</h2>
+    <div class="score-big" id="modalScore">0<span>ms</span></div>
+    <div id="modalBadge"></div>
+    <div class="sub" id="modalSub">TOP 10 달성! 닉네임을 입력하세요</div>
+    <input type="text" id="nameInput" placeholder="NICKNAME" maxlength="10">
+    <div class="btns">
+      <button class="btn btn-ok" onclick="saveRank()">✓ SAVE</button>
+      <button class="btn btn-skip" onclick="skipRank()">SKIP</button>
+    </div>
+  </div>
 </div>
-<div id="history"></div>
-<div id="ctrl">CLICK ARENA / HIT TARGET — REACTION TIME TEST</div>
 
 <script>
-const arena=document.getElementById('arena'),tgt=document.getElementById('target');
-const stateEl=document.getElementById('state'),sub=document.getElementById('sub');
-const lastEl=document.getElementById('last'),bestEl=document.getElementById('best'),avgEl=document.getElementById('avg'),triesEl=document.getElementById('tries');
-const history=document.getElementById('history');
-let phase='idle',timer,startTime,results=[],best=Infinity;
+var STORAGE_KEY='reaction_ranking_v1';
+// reaction: lower is better — top 10 = lowest times
+function getRanking(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch(e){return[];}}
+function saveRanking(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list));}
+function isTop10(ms){
+  var r=getRanking();
+  if(r.length<10)return true;
+  return ms<r[r.length-1].score;
+}
+function getRankPos(ms){var r=getRanking();for(var i=0;i<r.length;i++){if(ms<r[i].score)return i+1;}return r.length+1;}
+function addRanking(name,ms){
+  var r=getRanking();
+  r.push({name:name.toUpperCase()||'ANONYMOUS',score:ms});
+  r.sort(function(a,b){return a.score-b.score;}); // ascending: lower=better
+  r=r.slice(0,10);saveRanking(r);renderRanking(ms);
+}
+function renderRanking(hl){
+  var r=getRanking(),el=document.getElementById('rankList'),medals=['gold','silver','bronze'];
+  if(r.length===0){el.innerHTML='<div class="rank-empty">— NO RECORDS —</div>';return;}
+  el.innerHTML=r.map(function(item,i){
+    var isNew=hl!==undefined&&item.score===hl;
+    return '<div class="rank-row'+(isNew?' rank-new':'')+'">'+
+      '<span class="rank-num '+(medals[i]||'')+'">'+(i+1)+'</span>'+
+      '<span class="rank-name">'+item.name+'</span>'+
+      '<span class="rank-score">'+item.score+'</span></div>';
+  }).join('')+(r.length<10?Array(10-r.length).fill('<div class="rank-empty">—</div>').join(''):'');
+}
 
-const MODES=['click','target'];
+var phase='idle',timer,startTime,results=[],pendingMs=0;
+var arena=document.getElementById('arena');
+var tgt=document.getElementById('target');
+var stateText=document.getElementById('stateText');
+var stateSub=document.getElementById('stateSub');
 
 function setPhase(p){
-  phase=p;arena.className='arena '+p;
+  phase=p;
   if(p==='wait'){
-    stateEl.style.color='#ffcc00';stateEl.textContent='WAIT...';
-    sub.textContent='DO NOT CLICK YET';
+    arena.style.background='#000';
+    stateText.style.color='var(--yellow)';stateText.textContent='WAIT...';
+    stateSub.textContent='신호를 기다리세요';
     tgt.style.display='none';
+    var delay=1000+Math.random()*3000;
+    timer=setTimeout(function(){setPhase('go');},delay);
   } else if(p==='go'){
-    stateEl.style.color='#00ff41';stateEl.textContent='NOW!';
-    sub.textContent='CLICK!';
+    arena.style.background='rgba(63,185,80,0.04)';
+    stateText.style.color='var(--green)';stateText.textContent='NOW!';
+    stateSub.textContent='클릭!';
     startTime=performance.now();
-    // random target
-    tgt.style.left=(30+Math.random()*340)+'px';
-    tgt.style.top=(30+Math.random()*340)+'px';
+    var margin=40;
+    tgt.style.left=(margin+Math.random()*(arena.offsetWidth-margin*2))+'px';
+    tgt.style.top=(margin+Math.random()*(arena.offsetHeight-margin*2))+'px';
     tgt.style.display='block';
-    const g=`radial-gradient(circle,#ffcc00 30%,rgba(255,204,0,.2) 100%)`;
-    tgt.style.background=g;
-    tgt.style.boxShadow='0 0 20px #ffcc00, 0 0 40px rgba(255,204,0,.5)';
-    tgt.style.animation='pulse 0.5s ease-in-out infinite alternate';
+    tgt.style.background='radial-gradient(circle,#d29922 30%,rgba(210,153,34,.2) 100%)';
+    tgt.style.boxShadow='0 0 16px #d29922, 0 0 32px rgba(210,153,34,.4)';
+    tgt.style.animation='tpulse .5s ease-in-out infinite alternate';
   } else if(p==='early'){
     clearTimeout(timer);
-    stateEl.style.color='#ff0055';stateEl.textContent='TOO EARLY!';
-    sub.textContent='CLICK TO TRY AGAIN';
+    arena.style.background='rgba(248,81,73,0.06)';
+    stateText.style.color='var(--red)';stateText.textContent='TOO EARLY!';
+    stateSub.textContent='클릭하면 재시작';
     tgt.style.display='none';
   } else if(p==='idle'){
-    stateEl.style.color='#ffcc00';stateEl.textContent='STANDBY';
-    sub.textContent='CLICK TO BEGIN';
+    arena.style.background='#000';
+    stateText.style.color='var(--yellow)';stateText.textContent='STANDBY';
+    stateSub.textContent='CLICK TO BEGIN';
     tgt.style.display='none';
   }
 }
-function startRound(){
-  setPhase('wait');
-  const delay=1000+Math.random()*3000;
-  timer=setTimeout(()=>setPhase('go'),delay);
-}
+
 function record(ms){
   results.push(ms);if(results.length>10)results.shift();
-  if(ms<best)best=ms;
-  const avg=Math.round(results.reduce((a,b)=>a+b,0)/results.length);
-  lastEl.textContent=ms+'ms';bestEl.textContent=best+'ms';avgEl.textContent=avg+'ms';
-  triesEl.textContent=results.length;
-  renderHistory();
+  var best=Math.min.apply(null,results);
+  var avg=Math.round(results.reduce(function(a,b){return a+b;},0)/results.length);
+  var color=ms<200?'var(--green)':ms<350?'var(--yellow)':'var(--red)';
+  document.getElementById('sLast').textContent=ms+'ms';
+  document.getElementById('sLast').style.color=color;
+  document.getElementById('sBest').textContent=best+'ms';
+  document.getElementById('sAvg').textContent=avg+'ms';
+  document.getElementById('sTries').textContent=results.length;
+  renderHist();
+  // check top 10
+  if(isTop10(ms)){
+    pendingMs=ms;
+    var pos=getRankPos(ms);
+    document.getElementById('modalScore').innerHTML=ms+'<span>ms</span>';
+    document.getElementById('modalBadge').innerHTML='<div class="rank-badge">🏆 RANK #'+pos+' ENTRY</div>';
+    document.getElementById('nameInput').value='';
+    document.getElementById('overlay').classList.remove('hide');
+    setTimeout(function(){document.getElementById('nameInput').focus();},100);
+  }
 }
-function renderHistory(){
-  const max=Math.max(...results,400);
-  history.innerHTML='';
-  results.forEach(r=>{
-    const d=document.createElement('div');d.className='bar';
-    const h=Math.max(4,Math.round((r/max)*36));
+function renderHist(){
+  var max=Math.max.apply(null,results.concat([400]));
+  var el=document.getElementById('histBars');
+  el.innerHTML='';
+  results.forEach(function(r){
+    var d=document.createElement('div');
+    d.className='hist-bar';
+    var h=Math.max(3,Math.round((r/max)*32));
     d.style.height=h+'px';
-    d.style.background=r<200?'#00ff41':r<350?'#ffcc00':'#ff0055';
-    d.style.boxShadow=`0 0 6px ${r<200?'#00ff41':r<350?'#ffcc00':'#ff0055'}`;
-    d.title=r+'ms';history.appendChild(d);
+    d.style.background=r<200?'var(--green)':r<350?'var(--yellow)':'var(--red)';
+    d.title=r+'ms';
+    el.appendChild(d);
   });
 }
 
-// Click on arena (not target)
-arena.addEventListener('click',e=>{
-  if(e.target===tgt)return;
-  if(phase==='idle'||phase==='early'){startRound();}
+function handleClick(){
+  if(phase==='idle'||phase==='early'){setPhase('wait');}
   else if(phase==='wait'){setPhase('early');}
   else if(phase==='go'){
-    const ms=Math.round(performance.now()-startTime);
+    var ms=Math.round(performance.now()-startTime);
+    tgt.style.display='none';
+    var color=ms<200?'var(--green)':ms<350?'var(--yellow)':'var(--red)';
+    stateText.style.color=color;stateText.textContent=ms+'ms';
+    stateSub.textContent=ms<200?'NEURAL LINK OPTIMAL':ms<350?'ACCEPTABLE LATENCY':'SYSTEM LAG';
+    phase='result';
     record(ms);
-    stateEl.style.color=ms<200?'#00ff41':ms<350?'#ffcc00':'#ff0055';
-    stateEl.textContent=ms+'ms';
-    sub.textContent=ms<200?'NEURAL LINK OPTIMAL':ms<350?'ACCEPTABLE LATENCY':'SYSTEM LAG DETECTED';
-    tgt.style.display='none';phase='result';
-    setTimeout(startRound,1000);
-  } else if(phase==='result'){/* wait */}
-});
-tgt.addEventListener('click',e=>{
-  e.stopPropagation();
-  if(phase!=='go')return;
-  const ms=Math.round(performance.now()-startTime);
-  record(ms);
-  stateEl.style.color=ms<200?'#00ff41':ms<350?'#ffcc00':'#ff0055';
-  stateEl.textContent=ms+'ms';
-  sub.textContent=ms<200?'NEURAL LINK OPTIMAL':ms<350?'ACCEPTABLE LATENCY':'SYSTEM LAG DETECTED';
-  tgt.style.display='none';phase='result';
-  setTimeout(startRound,1000);
-});
-// add pulse animation
-const style=document.createElement('style');
-style.textContent='@keyframes pulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.15)}}';
-document.head.appendChild(style);
+    setTimeout(function(){setPhase('wait');},1200);
+  }
+}
+
+arena.addEventListener('click',function(e){if(e.target!==tgt)handleClick();});
+tgt.addEventListener('click',function(e){e.stopPropagation();if(phase==='go'){handleClick();}});
+
+function saveRank(){
+  var name=document.getElementById('nameInput').value.trim()||'ANONYMOUS';
+  addRanking(name,pendingMs);
+  document.getElementById('overlay').classList.add('hide');
+}
+function skipRank(){document.getElementById('overlay').classList.add('hide');}
+document.getElementById('nameInput').addEventListener('keydown',function(e){if(e.key==='Enter')saveRank();});
+
+// CSS animation for target
+var s=document.createElement('style');
+s.textContent='@keyframes tpulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.18)}}';
+document.head.appendChild(s);
+
+renderRanking();
 </script>
 </body>
 </html>
