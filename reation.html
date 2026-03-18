@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REACTION_SYS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Share Tech Mono',monospace;overflow:hidden;user-select:none}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,204,0,0.03) 2px,rgba(255,204,0,0.03) 4px);pointer-events:none;z-index:10}
+  h1{font-family:'Orbitron',monospace;color:#ffcc00;font-size:1.4em;letter-spacing:.3em;text-shadow:0 0 20px #ffcc00,0 0 40px #ffcc00;margin-bottom:16px}
+  #arena{width:400px;height:400px;border:1px solid #ffcc00;box-shadow:0 0 30px rgba(255,204,0,.4);position:relative;cursor:crosshair;overflow:hidden;transition:background .1s}
+  #arena.wait{background:#000}
+  #arena.ready{background:rgba(255,0,85,.08)}
+  #arena.go{background:rgba(0,255,65,.08)}
+  #arena.early{background:rgba(255,0,85,.2)}
+  #center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+  #state{font-family:'Orbitron',monospace;font-size:1.6em;font-weight:900;letter-spacing:.2em}
+  #sub{font-size:.8em;letter-spacing:.1em;margin-top:8px;color:#666}
+  #target{position:absolute;width:60px;height:60px;border-radius:50%;cursor:crosshair;display:none;transform:translate(-50%,-50%)}
+  #stats{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+  .stat{border:1px solid #ffcc00;padding:6px 16px;color:#ffcc00;font-size:.8em;text-shadow:0 0 8px #ffcc00;min-width:90px;text-align:center}
+  .stat b{display:block;font-size:1.4em;margin-top:2px}
+  #history{width:400px;margin-top:12px;display:flex;gap:4px;height:40px;align-items:flex-end}
+  .bar{flex:1;background:#ffcc00;min-height:4px;position:relative;transition:height .3s}
+  #ctrl{color:#333;font-size:.75em;margin-top:10px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<h1>▶ REACTION_SYS v2.0</h1>
+<div id="arena" class="wait">
+  <div id="center">
+    <div id="state" style="color:#ffcc00">STANDBY</div>
+    <div id="sub">CLICK TO BEGIN</div>
+  </div>
+  <div id="target"></div>
+</div>
+<div id="stats">
+  <div class="stat">LAST<b id="last">—</b></div>
+  <div class="stat">BEST<b id="best">—</b></div>
+  <div class="stat">AVG<b id="avg">—</b></div>
+  <div class="stat">TRIES<b id="tries">0</b></div>
+</div>
+<div id="history"></div>
+<div id="ctrl">CLICK ARENA / HIT TARGET — REACTION TIME TEST</div>
+
+<script>
+const arena=document.getElementById('arena'),tgt=document.getElementById('target');
+const stateEl=document.getElementById('state'),sub=document.getElementById('sub');
+const lastEl=document.getElementById('last'),bestEl=document.getElementById('best'),avgEl=document.getElementById('avg'),triesEl=document.getElementById('tries');
+const history=document.getElementById('history');
+let phase='idle',timer,startTime,results=[],best=Infinity;
+
+const MODES=['click','target'];
+
+function setPhase(p){
+  phase=p;arena.className='arena '+p;
+  if(p==='wait'){
+    stateEl.style.color='#ffcc00';stateEl.textContent='WAIT...';
+    sub.textContent='DO NOT CLICK YET';
+    tgt.style.display='none';
+  } else if(p==='go'){
+    stateEl.style.color='#00ff41';stateEl.textContent='NOW!';
+    sub.textContent='CLICK!';
+    startTime=performance.now();
+    // random target
+    tgt.style.left=(30+Math.random()*340)+'px';
+    tgt.style.top=(30+Math.random()*340)+'px';
+    tgt.style.display='block';
+    const g=`radial-gradient(circle,#ffcc00 30%,rgba(255,204,0,.2) 100%)`;
+    tgt.style.background=g;
+    tgt.style.boxShadow='0 0 20px #ffcc00, 0 0 40px rgba(255,204,0,.5)';
+    tgt.style.animation='pulse 0.5s ease-in-out infinite alternate';
+  } else if(p==='early'){
+    clearTimeout(timer);
+    stateEl.style.color='#ff0055';stateEl.textContent='TOO EARLY!';
+    sub.textContent='CLICK TO TRY AGAIN';
+    tgt.style.display='none';
+  } else if(p==='idle'){
+    stateEl.style.color='#ffcc00';stateEl.textContent='STANDBY';
+    sub.textContent='CLICK TO BEGIN';
+    tgt.style.display='none';
+  }
+}
+function startRound(){
+  setPhase('wait');
+  const delay=1000+Math.random()*3000;
+  timer=setTimeout(()=>setPhase('go'),delay);
+}
+function record(ms){
+  results.push(ms);if(results.length>10)results.shift();
+  if(ms<best)best=ms;
+  const avg=Math.round(results.reduce((a,b)=>a+b,0)/results.length);
+  lastEl.textContent=ms+'ms';bestEl.textContent=best+'ms';avgEl.textContent=avg+'ms';
+  triesEl.textContent=results.length;
+  renderHistory();
+}
+function renderHistory(){
+  const max=Math.max(...results,400);
+  history.innerHTML='';
+  results.forEach(r=>{
+    const d=document.createElement('div');d.className='bar';
+    const h=Math.max(4,Math.round((r/max)*36));
+    d.style.height=h+'px';
+    d.style.background=r<200?'#00ff41':r<350?'#ffcc00':'#ff0055';
+    d.style.boxShadow=`0 0 6px ${r<200?'#00ff41':r<350?'#ffcc00':'#ff0055'}`;
+    d.title=r+'ms';history.appendChild(d);
+  });
+}
+
+// Click on arena (not target)
+arena.addEventListener('click',e=>{
+  if(e.target===tgt)return;
+  if(phase==='idle'||phase==='early'){startRound();}
+  else if(phase==='wait'){setPhase('early');}
+  else if(phase==='go'){
+    const ms=Math.round(performance.now()-startTime);
+    record(ms);
+    stateEl.style.color=ms<200?'#00ff41':ms<350?'#ffcc00':'#ff0055';
+    stateEl.textContent=ms+'ms';
+    sub.textContent=ms<200?'NEURAL LINK OPTIMAL':ms<350?'ACCEPTABLE LATENCY':'SYSTEM LAG DETECTED';
+    tgt.style.display='none';phase='result';
+    setTimeout(startRound,1000);
+  } else if(phase==='result'){/* wait */}
+});
+tgt.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(phase!=='go')return;
+  const ms=Math.round(performance.now()-startTime);
+  record(ms);
+  stateEl.style.color=ms<200?'#00ff41':ms<350?'#ffcc00':'#ff0055';
+  stateEl.textContent=ms+'ms';
+  sub.textContent=ms<200?'NEURAL LINK OPTIMAL':ms<350?'ACCEPTABLE LATENCY':'SYSTEM LAG DETECTED';
+  tgt.style.display='none';phase='result';
+  setTimeout(startRound,1000);
+});
+// add pulse animation
+const style=document.createElement('style');
+style.textContent='@keyframes pulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.15)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
