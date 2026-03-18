@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAF SEQUENCE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+:root{--bg:#0d1117;--surface:#161b22;--border:#21262d;--border2:#30363d;--text:#c9d1d9;--dim:#484f58;--mid:#8b949e;--accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--orange:#f0883e;--red:#f85149;--purple:#bc8cff;--C:#3fb950;--W:#f85149;--S:#58a6ff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;font-size:13px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px}
+.dots{display:flex;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%}
+.dr{background:#f85149}.dy{background:#d29922}.dg{background:#3fb950}
+.tb-title{flex:1;text-align:center;font-size:.7em;color:var(--dim);letter-spacing:.15em;font-family:'IBM Plex Mono',monospace}
+.wrap{max-width:900px;margin:0 auto;padding:24px 20px}
+.sec{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec span{font-size:.62em;color:var(--dim);letter-spacing:.2em;font-family:'IBM Plex Mono',monospace}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* controls */
+.controls{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.btn{background:var(--surface);border:1px solid var(--border2);color:var(--mid);font-family:'JetBrains Mono',monospace;font-size:.7em;padding:7px 16px;cursor:pointer;letter-spacing:.08em;transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.06)}
+.btn.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.08)}
+.btn-spd{border-color:var(--border2);color:var(--mid)}
+.btn-spd:hover{border-color:var(--yellow);color:var(--yellow);background:rgba(210,153,34,.06)}
+
+/* diagram area */
+.diag{background:var(--surface);border:1px solid var(--border);padding:20px;position:relative}
+
+/* actors */
+.actors{display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:0;position:relative;z-index:2}
+.actor{display:flex;flex-direction:column;align-items:center}
+.actor-box{padding:8px 14px;border:1px solid;font-family:'IBM Plex Mono',monospace;font-size:.72em;font-weight:500;letter-spacing:.15em;background:var(--bg);position:relative;z-index:2;white-space:nowrap}
+.actor.C .actor-box{color:var(--C);border-color:rgba(63,185,80,.4)}
+.actor.W .actor-box{color:var(--W);border-color:rgba(248,81,73,.4)}
+.actor.S .actor-box{color:var(--S);border-color:rgba(88,166,255,.4)}
+
+/* sequence canvas */
+.seq-area{position:relative;padding-top:8px}
+
+/* section group */
+.grp{margin:6px 0 0}
+.grp-label{font-family:'IBM Plex Mono',monospace;font-size:.6em;letter-spacing:.14em;padding:4px 10px;display:inline-block;margin-bottom:3px;border-left:2px solid;opacity:0;transition:opacity .3s}
+.grp-label.vis{opacity:1}
+.gl-tcp{color:var(--mid);border-color:var(--border2);background:rgba(255,255,255,.02)}
+.gl-tls{color:#bc8cff;border-color:rgba(188,140,255,.3);background:rgba(188,140,255,.04)}
+.gl-http{color:var(--green);border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.04)}
+
+/* arrow rows */
+.step{opacity:0;transition:opacity .3s;display:flex;align-items:center;height:34px;position:relative}
+.step.vis{opacity:1}
+
+/* lifeline backdrop using absolute divs */
+.lifelines{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
+.ll{position:absolute;top:0;bottom:0;width:1px;border-left:1px dashed}
+.ll-C{left:16.67%;border-color:rgba(63,185,80,.18)}
+.ll-W{left:50%;border-color:rgba(248,81,73,.18)}
+.ll-S{left:83.33%;border-color:rgba(88,166,255,.18)}
+
+.step-num{font-size:.58em;color:var(--dim);width:22px;flex-shrink:0;font-family:'IBM Plex Mono',monospace}
+
+.arrow-wrap{position:relative;flex:1;height:100%}
+
+.arr{position:absolute;top:50%;transform:translateY(-50%);height:1px;transition:width .45s ease;overflow:visible}
+.arr.solid{background:currentColor}
+.arr.dashed{background:repeating-linear-gradient(90deg,currentColor 0,currentColor 5px,transparent 5px,transparent 10px)}
+
+/* arrowhead */
+.arr::after{content:'';position:absolute;top:50%;transform:translateY(-50%);border-top:4px solid transparent;border-bottom:4px solid transparent}
+.arr.right::after{right:-1px;border-left:6px solid currentColor}
+.arr.left::after{left:-1px;border-right:6px solid currentColor;border-left:none}
+
+.arr-lbl{position:absolute;font-size:.6em;letter-spacing:.06em;white-space:nowrap;top:-14px;font-family:'IBM Plex Mono',monospace;opacity:0;transition:opacity .25s .3s}
+.step.vis .arr-lbl{opacity:1}
+
+/* detail */
+.detail{margin-top:14px;background:var(--surface);border:1px solid var(--border)}
+.dh{border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px}
+.dh-lbl{font-size:.6em;color:var(--dim);letter-spacing:.15em;font-family:'IBM Plex Mono',monospace}
+.dh-step{font-size:.68em;color:var(--accent);letter-spacing:.06em}
+.db{padding:12px 16px;font-size:.7em;color:var(--mid);line-height:1.9;letter-spacing:.02em;min-height:50px;font-family:'IBM Plex Mono',monospace}
+.db .a{color:var(--accent)}.db .g{color:var(--green)}.db .r{color:var(--red)}.db .y{color:var(--yellow)}
+
+/* progress */
+.prog-wrap{height:2px;background:var(--border);margin-top:14px;position:relative}
+.prog-fill{height:100%;background:var(--accent);transition:width .35s ease;width:0}
+
+.sbar{margin-top:14px;background:var(--surface);border:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:16px}
+.sb{font-size:.58em;color:var(--dim);letter-spacing:.1em}
+.sb span{color:var(--mid)}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;animation:bl 2s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+  <div class="tb-title">waf_sequence.log — TCP/TLS/HTTP FLOW ANALYSIS</div>
+</div>
+<div class="wrap">
+  <div class="sec"><span>// 01 — PLAYBACK CONTROLS</span></div>
+  <div class="controls">
+    <button class="btn" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+    <button class="btn" onclick="resetAll()">↺ RESET</button>
+    <button class="btn btn-spd" id="spdBtn" onclick="cycleSpeed()">⚡ 1×</button>
+  </div>
+
+  <div class="sec"><span>// 02 — SEQUENCE DIAGRAM</span></div>
+  <div class="diag">
+    <div class="actors">
+      <div class="actor C"><div class="actor-box">CLIENT</div></div>
+      <div class="actor W"><div class="actor-box">WAF (PROXY)</div></div>
+      <div class="actor S"><div class="actor-box">SERVER</div></div>
+    </div>
+    <div class="seq-area" id="seqArea">
+      <div class="lifelines">
+        <div class="ll ll-C"></div>
+        <div class="ll ll-W"></div>
+        <div class="ll ll-S"></div>
+      </div>
+      <!-- built by JS -->
+    </div>
+  </div>
+
+  <div class="detail">
+    <div class="dh">
+      <span class="dh-lbl">// PACKET INFO</span>
+      <span class="dh-step" id="dstep">— awaiting playback</span>
+    </div>
+    <div class="db" id="dinfo"><span style="color:var(--dim)">▶ PLAY를 눌러 시퀀스를 시작하세요.</span></div>
+  </div>
+  <div class="prog-wrap"><div class="prog-fill" id="prog"></div></div>
+  <div class="sbar">
+    <div class="sb">PROTO <span>TCP/TLS/HTTP</span></div>
+    <div class="sb">STEPS <span>14</span></div>
+    <div class="sb">MODE <span>PROXY</span></div>
+    <div class="sdot"></div>
+  </div>
+</div>
+
+<script>
+// C=16.67%, W=50%, S=83.33%
+const C=16.67, W=50, S=83.33;
+
+const SEQ=[
+  {grp:'CLIENT ↔ WAF  —  TCP 3-WAY HANDSHAKE',gcls:'gl-tcp',steps:[
+    {n:1,f:C,t:W,dir:'right',style:'solid', color:'var(--mid)', lbl:'SYN',
+     info:'<span class=a>CLIENT → WAF</span>  SYN 패킷 전송. 클라이언트가 WAF로 TCP 연결을 시작합니다.'},
+    {n:2,f:W,t:C,dir:'left', style:'dashed',color:'var(--mid)', lbl:'SYN-ACK',
+     info:'<span class=a>WAF → CLIENT</span>  SYN-ACK 응답. WAF가 연결 요청을 수락합니다.'},
+    {n:3,f:C,t:W,dir:'right',style:'solid', color:'var(--mid)', lbl:'ACK',
+     info:'<span class=a>CLIENT → WAF</span>  ACK 확인. <span class=g>CLIENT ↔ WAF TCP 연결 수립 완료.</span>'},
+  ]},
+  {grp:'WAF ↔ SERVER  —  TCP 3-WAY HANDSHAKE',gcls:'gl-tcp',steps:[
+    {n:4,f:W,t:S,dir:'right',style:'solid', color:'var(--mid)', lbl:'SYN',
+     info:'<span class=a>WAF → SERVER</span>  WAF가 서버로 별도 TCP 연결 시작. WAF는 프록시로 독립 동작합니다.'},
+    {n:5,f:S,t:W,dir:'left', style:'dashed',color:'var(--mid)', lbl:'SYN-ACK',
+     info:'<span class=a>SERVER → WAF</span>  서버가 WAF 연결 요청을 수락합니다.'},
+    {n:6,f:W,t:S,dir:'right',style:'solid', color:'var(--mid)', lbl:'ACK',
+     info:'<span class=a>WAF → SERVER</span>  ACK 확인. <span class=g>WAF ↔ SERVER TCP 연결 수립 완료.</span>'},
+  ]},
+  {grp:'(OPTIONAL) TLS HANDSHAKE  —  Client Side',gcls:'gl-tls',steps:[
+    {n:7,f:C,t:W,dir:'right',style:'solid', color:'var(--purple)', lbl:'ClientHello',
+     info:'<span class=a>TLS 협상 시작</span>  클라이언트가 지원 암호화 방식(Cipher Suite) 목록을 WAF에 전송합니다.'},
+    {n:8,f:W,t:C,dir:'left', style:'dashed',color:'var(--purple)', lbl:'ServerHello',
+     info:'<span class=a>WAF → CLIENT</span>  WAF가 인증서 제시 및 암호화 방식 선택. <span class=y>SSL Termination</span> 지점.'},
+  ]},
+  {grp:'(OPTIONAL) TLS HANDSHAKE  —  Server Side',gcls:'gl-tls',steps:[
+    {n:9,f:W,t:S,dir:'right',style:'solid', color:'var(--purple)', lbl:'ClientHello',
+     info:'<span class=a>WAF → SERVER</span>  WAF가 서버와 별도 TLS 연결 수립. Re-encryption 구간 시작.'},
+    {n:10,f:S,t:W,dir:'left',style:'dashed',color:'var(--purple)', lbl:'ServerHello',
+     info:'<span class=a>SERVER → WAF</span>  TLS 협상 완료. <span class=y>WAF는 양측 TLS를 독립 처리</span>합니다.'},
+  ]},
+  {grp:'HTTP FLOW  —  INSPECTION & RELAY',gcls:'gl-http',steps:[
+    {n:11,f:C,t:W,dir:'right',style:'solid', color:'var(--green)', lbl:'HTTP Request',
+     info:'<span class=a>CLIENT → WAF</span>  HTTP 요청 도착. <span class=r>WAF가 페이로드 전수 검사</span>  SQL Injection · XSS · RCE 등 공격 패턴 탐지.'},
+    {n:12,f:W,t:S,dir:'right',style:'solid', color:'var(--green)', lbl:'HTTP Request',
+     info:'<span class=a>WAF → SERVER</span>  <span class=g>검사 통과</span> 시 서버로 릴레이. 위협 탐지 시 여기서 연결 차단(403/502).'},
+    {n:13,f:S,t:W,dir:'left', style:'dashed',color:'var(--green)', lbl:'HTTP Response',
+     info:'<span class=a>SERVER → WAF</span>  서버 응답 수신. WAF는 응답에도 필터링(정보 유출·악성 스크립트) 적용 가능.'},
+    {n:14,f:W,t:C,dir:'left', style:'dashed',color:'var(--green)', lbl:'HTTP Response',
+     info:'<span class=a>WAF → CLIENT</span>  최종 응답 클라이언트에 전달. <span class=g>시퀀스 완료.</span>  클라이언트는 서버와 직접 통신하지 않습니다.'},
+  ]},
+];
+
+// flatten
+const all=[];
+SEQ.forEach(g=>{
+  all.push({type:'grp',grp:g.grp,gcls:g.gcls});
+  g.steps.forEach(s=>all.push({type:'step',...s}));
+});
+
+// build DOM
+const area=document.getElementById('seqArea');
+all.forEach((item,i)=>{
+  if(item.type==='grp'){
+    const d=document.createElement('div');
+    d.className=`grp-label ${item.gcls}`;
+    d.textContent=`— ${item.grp}`;
+    d.id=`gi${i}`;
+    area.appendChild(d);
+  } else {
+    const {n,f,t,dir,style,color,lbl}=item;
+    const L=Math.min(f,t), W2=Math.abs(t-f);
+    const d=document.createElement('div');
+    d.className='step';
+    d.id=`si${i}`;
+    d.innerHTML=`
+      <span class="step-num">${String(n).padStart(2,'0')}</span>
+      <div class="arrow-wrap">
+        <div class="arr ${style} ${dir}" style="left:${L}%;width:0;color:${color};--tw:${W2}%">
+          <span class="arr-lbl" style="color:${color};left:${W2/2}%;transform:translateX(-50%)">${lbl}</span>
+        </div>
+      </div>`;
+    area.appendChild(d);
+  }
+});
+
+let idx=0, playing=false, speed=1, timer=null;
+
+function showNext(){
+  if(idx>=all.length){
+    playing=false;
+    document.getElementById('playBtn').textContent='▶ PLAY';
+    document.getElementById('playBtn').classList.remove('active');
+    document.getElementById('prog').style.width='100%';
+    document.getElementById('dstep').textContent='SEQUENCE COMPLETE';
+    document.getElementById('dinfo').innerHTML='<span class=g>✓ 시퀀스 완료.</span>  클라이언트는 WAF를 통해서만 서버와 통신합니다. WAF는 모든 트래픽을 검사·릴레이합니다.';
+    return;
+  }
+  const item=all[idx];
+  const el=document.getElementById(item.type==='grp'?`gi${idx}`:`si${idx}`);
+  el.classList.add('vis');
+  if(item.type==='step'){
+    const arr=el.querySelector('.arr');
+    setTimeout(()=>{ arr.style.width=arr.style.getPropertyValue('--tw')||'33.66%'; },30);
+    document.getElementById('dstep').textContent=`STEP ${String(item.n).padStart(2,'0')}`;
+    document.getElementById('dinfo').innerHTML=item.info;
+  }
+  document.getElementById('prog').style.width=((idx+1)/all.length*100)+'%';
+  idx++;
+  if(playing) timer=setTimeout(showNext, (item.type==='grp'?500:950)/speed);
+}
+
+function togglePlay(){
+  const btn=document.getElementById('playBtn');
+  if(playing){
+    playing=false; clearTimeout(timer);
+    btn.textContent='▶ PLAY'; btn.classList.remove('active');
+  } else {
+    playing=true;
+    btn.textContent='⏸ PAUSE'; btn.classList.add('active');
+    if(idx>=all.length) resetAll(true);
+    showNext();
+  }
+}
+
+function resetAll(keepPlay){
+  clearTimeout(timer); playing=false; idx=0;
+  document.getElementById('playBtn').textContent='▶ PLAY';
+  document.getElementById('playBtn').classList.remove('active');
+  document.getElementById('prog').style.width='0';
+  document.getElementById('dstep').textContent='— awaiting playback';
+  document.getElementById('dinfo').innerHTML='<span style="color:var(--dim)">▶ PLAY를 눌러 시퀀스를 시작하세요.</span>';
+  all.forEach((_,i)=>{
+    const grpEl=document.getElementById(`gi${i}`);
+    const stepEl=document.getElementById(`si${i}`);
+    if(grpEl) grpEl.classList.remove('vis');
+    if(stepEl){
+      stepEl.classList.remove('vis');
+      const arr=stepEl.querySelector('.arr');
+      if(arr) arr.style.width='0';
+    }
+  });
+  if(keepPlay){ playing=true; document.getElementById('playBtn').textContent='⏸ PAUSE'; document.getElementById('playBtn').classList.add('active'); showNext(); }
+}
+
+function cycleSpeed(){
+  speed=speed===1?2:speed===2?.5:1;
+  document.getElementById('spdBtn').textContent=`⚡ ${speed}×`;
+}
+</script>
+</body>
+</html>
