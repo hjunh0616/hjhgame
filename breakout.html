@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BREAKOUT_SYS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Share Tech Mono',monospace;overflow:hidden}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,200,255,0.03) 2px,rgba(0,200,255,0.03) 4px);pointer-events:none;z-index:10}
+  h1{font-family:'Orbitron',monospace;color:#00c8ff;font-size:1.4em;letter-spacing:.3em;text-shadow:0 0 20px #00c8ff,0 0 40px #00c8ff;margin-bottom:8px}
+  #info{display:flex;gap:30px;margin-bottom:10px;color:#00c8ff;font-size:.85em;letter-spacing:.1em}
+  #info span{border:1px solid #00c8ff;padding:3px 12px;text-shadow:0 0 8px #00c8ff;box-shadow:0 0 8px rgba(0,200,255,.3)}
+  canvas{border:1px solid #00c8ff;box-shadow:0 0 30px rgba(0,200,255,.4),inset 0 0 30px rgba(0,200,255,.05);display:block;cursor:none}
+  #msg{color:#00c8ff;font-size:1em;letter-spacing:.15em;margin-top:10px;height:20px;text-shadow:0 0 10px #00c8ff}
+  #ctrl{color:#333;font-size:.75em;margin-top:8px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<h1>▶ BREAKOUT_SYS v2.0</h1>
+<div id="info"><span>SCORE: <b id="sc">0</b></span><span>HIGH: <b id="hi">0</b></span><span>LIVES: <b id="li">3</b></span></div>
+<canvas id="c" width="400" height="480"></canvas>
+<div id="msg">[ PRESS SPACE TO BOOT ]</div>
+<div id="ctrl">MOUSE/← → PADDLE &nbsp;|&nbsp; SPACE START</div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const sc=document.getElementById('sc'),hi=document.getElementById('hi'),li=document.getElementById('li'),msg=document.getElementById('msg');
+const COLS=8,ROWS=5,BW=44,BH=16,GAP=3;
+const COLORS=['#ff0055','#ff6600','#ffcc00','#00ff41','#00c8ff'];
+let paddle,ball,bricks,score,high=0,lives,running,paused;
+
+function init(){
+  paddle={x:160,y:450,w:80,h:12};
+  ball={x:200,y:420,vx:3,vy:-4,r:7};
+  bricks=[];
+  for(let r=0;r<ROWS;r++)for(let c2=0;c2<COLS;c2++)
+    bricks.push({x:c2*(BW+GAP)+8,y:r*(BH+GAP)+40,w:BW,h:BH,color:COLORS[r],alive:true,hp:r<2?2:1});
+  score=0;lives=3;sc.textContent=0;li.textContent=3;msg.textContent='';
+}
+
+let paddleh=12;
+function makePaddle(){paddle={x:160,y:450,w:80,h:paddleh};}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,400,480);
+  // grid
+  ctx.strokeStyle='rgba(0,200,255,0.05)';ctx.lineWidth=.5;
+  for(let i=0;i<400;i+=20){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,480);ctx.stroke()}
+  for(let i=0;i<480;i+=20){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(400,i);ctx.stroke()}
+  // bricks
+  bricks.forEach(b=>{
+    if(!b.alive)return;
+    ctx.shadowColor=b.color;ctx.shadowBlur=b.hp>1?15:8;
+    ctx.fillStyle=b.color;
+    ctx.globalAlpha=b.hp>1?1:.7;
+    ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.globalAlpha=1;
+    ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=1;
+    ctx.strokeRect(b.x+.5,b.y+.5,b.w-1,b.h-1);
+  });
+  ctx.shadowBlur=0;
+  // paddle
+  const pg=ctx.createLinearGradient(paddle.x,0,paddle.x+paddle.w,0);
+  pg.addColorStop(0,'rgba(0,200,255,0.3)');pg.addColorStop(.5,'#00c8ff');pg.addColorStop(1,'rgba(0,200,255,0.3)');
+  ctx.shadowColor='#00c8ff';ctx.shadowBlur=20;
+  ctx.fillStyle=pg;ctx.fillRect(paddle.x,paddle.y,paddle.w,paddle.h);
+  ctx.shadowBlur=0;
+  // ball
+  ctx.shadowColor='#fff';ctx.shadowBlur=15;
+  const bg=ctx.createRadialGradient(ball.x,ball.y,0,ball.x,ball.y,ball.r);
+  bg.addColorStop(0,'#fff');bg.addColorStop(1,'#00c8ff');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  // lives dots
+  for(let i=0;i<lives;i++){ctx.fillStyle='#00c8ff';ctx.shadowColor='#00c8ff';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(10+i*16,10,5,0,Math.PI*2);ctx.fill();}
+  ctx.shadowBlur=0;
+}
+
+function tick(){
+  ball.x+=ball.vx;ball.y+=ball.vy;
+  if(ball.x<ball.r||ball.x>400-ball.r)ball.vx*=-1;
+  if(ball.y<ball.r)ball.vy*=-1;
+  if(ball.y>490){loseLife();return;}
+  // paddle
+  if(ball.y+ball.r>paddle.y&&ball.y-ball.r<paddle.y+paddle.h&&ball.x>paddle.x&&ball.x<paddle.x+paddle.w){
+    ball.vy=Math.abs(ball.vy)*-1;
+    ball.vx=((ball.x-(paddle.x+paddle.w/2))/(paddle.w/2))*5;
+  }
+  // bricks
+  bricks.forEach(b=>{
+    if(!b.alive)return;
+    if(ball.x>b.x&&ball.x<b.x+b.w&&ball.y-ball.r<b.y+b.h&&ball.y+ball.r>b.y){
+      b.hp--;if(b.hp<=0)b.alive=false;
+      ball.vy*=-1;score+=10;if(score>high)high=score;
+      sc.textContent=score;hi.textContent=high;
+    }
+  });
+  if(bricks.every(b=>!b.alive)){win();}
+  draw();requestAnimationFrame(running&&!paused?tick:()=>{});
+}
+
+function loseLife(){
+  lives--;li.textContent=lives;
+  if(lives<=0){gameOver();return;}
+  ball={x:200,y:420,vx:3,vy:-4,r:7};
+}
+function gameOver(){
+  running=false;
+  ctx.fillStyle='rgba(255,0,85,0.2)';ctx.fillRect(0,0,400,480);
+  ctx.font='bold 26px Orbitron';ctx.fillStyle='#ff0055';ctx.textAlign='center';
+  ctx.shadowColor='#ff0055';ctx.shadowBlur=20;ctx.fillText('GAME OVER',200,240);ctx.shadowBlur=0;
+  msg.textContent='[ SYSTEM CRASH — SPACE TO RESTART ]';
+}
+function win(){
+  running=false;
+  ctx.fillStyle='rgba(0,255,65,0.2)';ctx.fillRect(0,0,400,480);
+  ctx.font='bold 26px Orbitron';ctx.fillStyle='#00ff41';ctx.textAlign='center';
+  ctx.shadowColor='#00ff41';ctx.shadowBlur=20;ctx.fillText('CLEARED!',200,240);ctx.shadowBlur=0;
+  msg.textContent='[ SYSTEM CLEARED — SPACE TO RESTART ]';
+}
+
+c.addEventListener('mousemove',e=>{
+  const r=c.getBoundingClientRect();
+  paddle.x=Math.max(0,Math.min(400-paddle.w,(e.clientX-r.left)-paddle.w/2));
+});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    if(!running){init();makePaddle();running=true;paused=false;requestAnimationFrame(tick);}
+    else if(running){paused=!paused;if(!paused)requestAnimationFrame(tick);msg.textContent=paused?'[ PAUSED ]':'';}
+    e.preventDefault();
+  }
+  if(e.key==='ArrowLeft'&&running)paddle.x=Math.max(0,paddle.x-20);
+  if(e.key==='ArrowRight'&&running)paddle.x=Math.min(400-paddle.w,paddle.x+20);
+});
+
+ctx.fillStyle='#000';ctx.fillRect(0,0,400,480);
+ctx.font='bold 14px Orbitron';ctx.fillStyle='rgba(0,200,255,0.4)';ctx.textAlign='center';
+ctx.fillText('PRESS SPACE TO START',200,240);
+</script>
+</body>
+</html>
