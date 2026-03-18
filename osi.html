@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSI 7 LAYER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+:root{--bg:#0d1117;--surface:#161b22;--border:#21262d;--border2:#30363d;--text:#c9d1d9;--dim:#484f58;--mid:#8b949e;--accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--orange:#f0883e;--red:#f85149;--purple:#bc8cff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;font-size:13px}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px}
+.dots{display:flex;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%}
+.dr{background:#f85149}.dy{background:#d29922}.dg{background:#3fb950}
+.tb-title{flex:1;text-align:center;font-size:.7em;color:var(--dim);letter-spacing:.15em;font-family:'IBM Plex Mono',monospace}
+.tb-badge{font-size:.62em;padding:2px 8px;border:1px solid var(--green);color:var(--green);letter-spacing:.1em}
+.wrap{max-width:920px;margin:0 auto;padding:24px 20px}
+.sec{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec span{font-size:.62em;color:var(--dim);letter-spacing:.2em;font-family:'IBM Plex Mono',monospace}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+.pkt{background:var(--surface);border:1px solid var(--border);padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;overflow:hidden}
+.pkt-lbl{font-size:.62em;color:var(--dim);letter-spacing:.1em;white-space:nowrap}
+.pkt-track{flex:1;height:3px;background:var(--border);position:relative;overflow:hidden}
+.pkt-p{position:absolute;top:0;left:-20%;height:100%;width:20%;animation:pmove 2.4s ease-in-out infinite}
+.pkt-p:nth-child(1){background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.pkt-p:nth-child(2){background:linear-gradient(90deg,transparent,var(--green),transparent);animation-delay:.8s}
+.pkt-p:nth-child(3){background:linear-gradient(90deg,transparent,var(--purple),transparent);animation-delay:1.6s}
+@keyframes pmove{0%{left:-20%}100%{left:120%}}
+.pkt-st{font-size:.62em;color:var(--green);letter-spacing:.1em}
+.pkt-st::before{content:'● '}
+.col-h{display:grid;grid-template-columns:52px 175px 1fr 1fr;padding:5px 0;border-bottom:1px solid var(--border2);margin-bottom:3px}
+.ch{font-size:.58em;color:var(--dim);letter-spacing:.18em;padding:0 12px;font-family:'IBM Plex Mono',monospace}
+.rows{display:flex;flex-direction:column;gap:2px}
+.row{display:grid;grid-template-columns:52px 175px 1fr 1fr;border:1px solid transparent;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;opacity:0;animation:fu .4s ease forwards}
+.row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;opacity:0;transition:opacity .15s}
+.row:hover{border-color:var(--border2);background:rgba(255,255,255,.02)}
+.row:hover::before,.row.sel::before{opacity:1}
+.row.sel{border-color:var(--border2);background:rgba(255,255,255,.03)}
+.ra{--c:#f85149}.ra::before{background:#f85149}
+.rt{--c:#58a6ff}.rt::before{background:#58a6ff}
+.rn{--c:#3fb950}.rn::before{background:#3fb950}
+.rp{--c:#f0883e}.rp::before{background:#f0883e}
+.row:nth-child(1){animation-delay:.05s}
+.row:nth-child(2){animation-delay:.1s}
+.row:nth-child(3){animation-delay:.15s}
+.row:nth-child(4){animation-delay:.2s}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.cell{padding:11px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center}
+.cell:last-child{border-right:none}
+.cn{font-size:.82em;font-weight:700;color:var(--c);text-align:center;letter-spacing:.04em}
+.cl{font-size:.7em;font-weight:500;color:var(--text);margin-bottom:3px;letter-spacing:.04em}
+.cs{font-size:.6em;color:var(--dim);letter-spacing:.04em}
+.protos{display:flex;flex-wrap:wrap;gap:4px}
+.proto{font-size:.6em;padding:2px 7px;border:1px solid var(--border2);color:var(--mid);transition:all .15s;letter-spacing:.03em;font-family:'IBM Plex Mono',monospace}
+.row:hover .proto,.row.sel .proto{border-color:var(--c);color:var(--text)}
+.devs{display:flex;flex-direction:column;gap:3px}
+.dev{font-size:.6em;color:var(--dim);letter-spacing:.04em;display:flex;align-items:center;gap:5px}
+.dev::before{content:'›';color:var(--c)}
+.row:hover .dev,.row.sel .dev{color:var(--mid)}
+.detail{margin-top:14px;background:var(--surface);border:1px solid var(--border)}
+.dh{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px}
+.dh-lbl{font-size:.6em;color:var(--dim);letter-spacing:.15em;font-family:'IBM Plex Mono',monospace}
+.dh-name{font-size:.68em;color:var(--accent);letter-spacing:.06em}
+.db{padding:12px 16px;font-size:.7em;color:var(--mid);line-height:1.9;letter-spacing:.02em;min-height:52px;font-family:'IBM Plex Mono',monospace}
+.db .a{color:var(--accent)}.db .g{color:var(--green)}.db .y{color:var(--yellow)}
+.sbar{margin-top:16px;background:var(--surface);border:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:16px}
+.sb{font-size:.58em;color:var(--dim);letter-spacing:.1em}
+.sb span{color:var(--mid)}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;animation:bl 2s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+  <div class="tb-title">osi_reference.db — NETWORK PROTOCOL STACK</div>
+  <div class="tb-badge">LIVE</div>
+</div>
+<div class="wrap">
+  <div class="sec"><span>// 01 — PACKET MONITOR</span></div>
+  <div class="pkt">
+    <span class="pkt-lbl">TRAFFIC</span>
+    <div class="pkt-track"><div class="pkt-p"></div><div class="pkt-p"></div><div class="pkt-p"></div></div>
+    <span class="pkt-st">INTERFACE ACTIVE</span>
+  </div>
+  <div class="sec"><span>// 02 — OSI LAYER TABLE</span></div>
+  <div class="col-h">
+    <div class="ch" style="text-align:center">NUM</div>
+    <div class="ch">LAYER</div>
+    <div class="ch">PROTOCOLS</div>
+    <div class="ch">SECURITY DEVICES</div>
+  </div>
+  <div class="rows">
+    <div class="row ra" onclick="sel(this,'LAYER 5~7','APPLICATION / PRESENTATION / SESSION','<span class=a>HTTP · SMTP · DNS</span> 등 애플리케이션 레이어 프로토콜. 실제 사용자 데이터를 처리하는 최상위 계층. <span class=g>WAF</span>는 HTTP 페이로드를 검사하여 SQLi, XSS 등 공격을 차단. <span class=y>SSL VPN</span>은 이 계층에서 암호화 터널을 종단(SSL Termination).')">
+      <div class="cell"><div class="cn">5~7</div></div>
+      <div class="cell"><div class="cl">APPLICATION</div><div class="cs">Presentation · Session</div></div>
+      <div class="cell"><div class="protos"><span class="proto">telnet</span><span class="proto">FTP</span><span class="proto">DHCP</span><span class="proto">HTTP</span><span class="proto">SMTP</span><span class="proto">DNS</span><span class="proto">SNMP</span><span class="proto">TFTP</span></div></div>
+      <div class="cell"><div class="devs"><div class="dev">WAF</div><div class="dev">IPS / IDS</div><div class="dev">NGFW · APT</div><div class="dev">SSL VPN</div></div></div>
+    </div>
+    <div class="row rt" onclick="sel(this,'LAYER 4','TRANSPORT','<span class=a>TCP</span>는 3-way handshake(SYN → SYN-ACK → ACK)로 연결 수립 후 신뢰성 있는 전송 보장. <span class=a>UDP</span>는 비연결형으로 속도 우선(스트리밍·DNS). <span class=g>방화벽(FW)</span>은 포트 번호 기반으로 트래픽 허용·차단.')">
+      <div class="cell"><div class="cn">4</div></div>
+      <div class="cell"><div class="cl">TRANSPORT</div><div class="cs">Port · End-to-End</div></div>
+      <div class="cell"><div class="protos"><span class="proto">TCP</span><span class="proto">UDP</span></div></div>
+      <div class="cell"><div class="devs"><div class="dev">FW (Stateful)</div><div class="dev">UTM</div><div class="dev">IPsec VPN</div></div></div>
+    </div>
+    <div class="row rn" onclick="sel(this,'LAYER 3','NETWORK','<span class=a>IP</span>는 논리 주소로 패킷 경로 결정. <span class=a>ARP</span>는 IP→MAC 주소 변환. <span class=a>ICMP</span>는 ping·traceroute 등 진단 프로토콜. <span class=g>L3 스위치·라우터</span>가 라우팅 테이블로 경로 설정. <span class=y>NAC</span>는 네트워크 접근을 인증 기반으로 제어.')">
+      <div class="cell"><div class="cn">3</div></div>
+      <div class="cell"><div class="cl">NETWORK</div><div class="cs">IP · Routing · Logic</div></div>
+      <div class="cell"><div class="protos"><span class="proto">IP</span><span class="proto">ICMP</span><span class="proto">ARP</span><span class="proto">RARP</span></div></div>
+      <div class="cell"><div class="devs"><div class="dev">NAC</div><div class="dev">L3 Switch</div><div class="dev">Router</div></div></div>
+    </div>
+    <div class="row rp" onclick="sel(this,'LAYER 1~2','DATA LINK / PHYSICAL','<span class=a>MAC 주소</span>로 동일 네트워크 내 장치를 식별. 이더넷 <span class=a>프레임</span> 단위로 데이터 전송. <span class=g>L2 스위치</span>가 MAC 테이블로 포워딩 결정. Physical 계층은 전기·광 신호를 물리 매체(케이블·광섬유)로 전송.')">
+      <div class="cell"><div class="cn">1~2</div></div>
+      <div class="cell"><div class="cl">DATA LINK</div><div class="cs">Physical · MAC · Frame</div></div>
+      <div class="cell"><div class="protos"><span class="proto">Ethernet</span><span class="proto">Network I/F</span></div></div>
+      <div class="cell"><div class="devs"><div class="dev">L2 Switch</div><div class="dev">Hub · Cable</div></div></div>
+    </div>
+  </div>
+  <div class="detail">
+    <div class="dh"><span class="dh-lbl">// LAYER INFO</span><span class="dh-name" id="dn">— select a row</span></div>
+    <div class="db" id="db"><span style="color:var(--dim)">행을 클릭하면 계층 설명이 출력됩니다.</span></div>
+  </div>
+  <div class="sbar">
+    <div class="sb">REF <span>OSI 7-LAYER</span></div>
+    <div class="sb">VER <span>1.0.0</span></div>
+    <div class="sb">ROWS <span>4</span></div>
+    <div class="sdot"></div>
+  </div>
+</div>
+<script>
+let cur=null;
+function sel(row,num,name,desc){
+  if(cur)cur.classList.remove('sel');
+  row.classList.add('sel');cur=row;
+  document.getElementById('dn').textContent=num+' — '+name;
+  document.getElementById('db').innerHTML=desc;
+}
+</script>
+</body>
+</html>
